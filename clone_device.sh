@@ -6,17 +6,34 @@
 # single file checkouts for inputed repo
 checkout() {
   echo -e "\n# Try to get build.prop from system dirs"
-  git checkout $br -- system/build.prop
-  git checkout $br -- system/system/build.prop
+  git checkout $branch_name -- system/build.prop
+  git checkout $branch_name -- system/system/build.prop
 
   echo -e "\n# Try to get build.prop from system/product dirs"
-  git checkout $br -- system/system/product/build.prop
-  git checkout $br -- system/product/build.prop
+  git checkout $branch_name -- system/system/product/build.prop
+  git checkout $branch_name -- system/product/build.prop
 
   echo -e "\n# Try to get build.prop from vendor dirs"
   echo
-  git checkout $br -- vendor/build.prop 
-  git checkout $br -- system/vendor/build.prop
+  git checkout $branch_name -- vendor/build.prop 
+  git checkout $branch_name -- system/vendor/build.prop
+
+  retry_checkout
+}
+
+retry_checkout() {
+  echo -e "\n# Try again to get build.prop from system dirs"
+  git checkout $branch_name -- system/build.prop
+  git checkout $branch_name -- system/system/build.prop
+
+  echo -e "\n# Try again to get build.prop from system/product dirs"
+  git checkout $branch_name -- system/system/product/build.prop
+  git checkout $branch_name -- system/product/build.prop
+
+  echo -e "\n# Try again to get build.prop from vendor dirs"
+  echo
+  git checkout $branch_name -- vendor/build.prop 
+  git checkout $branch_name -- system/vendor/build.prop
 
   rename
 }
@@ -75,13 +92,22 @@ elif [[ $(echo $url | grep "https://") != "" ]] && [[ $(echo "$url" | grep ".git
   IFS='/' read -r -a url_arr <<< "$url"
   IFS='.' read -r -a git_dir_arr <<< "${url_arr[-1]}"
   git_dir=${git_dir_arr[0]}
-
-  git clone --depth 1 --no-checkout --filter=blob:none ${url}
+  
+  if [ -d "$git_dir" ]; then
+    echo "Deleting $git_dir..."
+    rm -rf "$git_dir"
+    echo "$git_dir deleted successfully."
+  else
+    echo "$git_dir does not exist. Nothing to delete."
+  fi
+  
+  echo "--- List of the available branches ---"
+  git ls-remote --heads ${url}
+  read -p "Enter the branch name: " branch_name
+  
+  git clone --depth 1 --no-checkout --filter=blob:none -b $branch_name ${url}
 
   cd ${git_dir[0]}
-  branch_out=$(git branch)
-  IFS=' ' read -r -a br_arr <<< "$branch_out"
-  br=${br_arr[-1]}
 
   checkout
 else
